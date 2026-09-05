@@ -15,11 +15,11 @@ Temporary add-ons must be loaded again after restarting Zen.
 
 On Dubizzle, hover a listing to highlight every loaded listing from that seller. Click **Mute seller · N** to hide them. Matching uses seller data already loaded by Dubizzle, so scrolling and hovering make no requests and open no tabs.
 
-On Facebook Marketplace, hovering is passive and only highlights visible exact-match bundles. Click **Match seller** to open a short-lived inactive tab and resolve the seller. After the match, the button becomes **Mute seller · N**; click it to hide those listings locally.
+On Facebook Marketplace, hovering is passive and only highlights visible exact-match bundles. Click **Match seller** to open a short-lived inactive tab and identify the seller. **Mute seller · N** becomes available as soon as the seller is identified. Additional matches continue loading in the background and are hidden automatically if you mute the seller during the scan.
 
 Muted sellers are stored in `browser.storage.local`.
 
-Use the **MarketMute · N muted** button in the bottom-right corner to unmute sellers.
+Use **MarketMute** in the bottom-right corner to search and unmute sellers, or open their Facebook profiles. Older Facebook entries without verified names display a seller ID; matching that seller again refreshes the name. Escape or clicking outside closes the panel.
 
 ## Limits
 

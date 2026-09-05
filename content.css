@@ -8,8 +8,8 @@
 
 .marketmute-related {
   border-radius: 10px !important;
-  outline: 4px solid #f5a623 !important;
-  outline-offset: -4px !important;
+  outline: 2px solid #6486f6 !important;
+  outline-offset: -2px !important;
 }
 
 .marketmute-mute {
@@ -17,12 +17,16 @@
   z-index: 20;
   top: 8px;
   right: 8px;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 8px 11px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 9px;
   color: #fff;
-  background: #b42318;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+  background: #242833;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 22%);
   cursor: pointer;
   font: 600 12px/1.2 system-ui, sans-serif;
   opacity: 0;
@@ -30,6 +34,9 @@
 }
 
 .marketmute-card:hover > .marketmute-mute,
+.marketmute-card:focus-within > .marketmute-mute,
+.marketmute-loading > .marketmute-mute,
+.marketmute-error > .marketmute-mute,
 .marketmute-mute:focus-visible {
   opacity: 1;
   pointer-events: auto;
@@ -39,6 +46,35 @@
   cursor: wait;
 }
 
+.marketmute-mute[data-action="mute"] {
+  background: #a72c29;
+}
+
+.marketmute-mute[data-action="retry"] {
+  color: #fff0c2;
+  background: #58401b;
+}
+
+.marketmute-loading > .marketmute-mute::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgb(255 255 255 / 30%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: marketmute-spin .8s linear infinite;
+}
+
+@keyframes marketmute-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketmute-loading > .marketmute-mute::before {
+    animation: none;
+  }
+}
+
 .marketmute-dubizzle .marketmute-mute {
   top: auto;
   right: 12px;
@@ -46,62 +82,302 @@
 }
 
 #marketmute-manager {
+  --mm-bg: #fff;
+  --mm-text: #20242c;
+  --mm-muted: #677080;
+  --mm-line: #e9ebef;
+  --mm-subtle: #f5f6f8;
+  --mm-accent: #3659cb;
   position: fixed;
   z-index: 2147483647;
-  right: 16px;
-  bottom: 16px;
-  color: #111;
-  font: 13px/1.35 system-ui, sans-serif;
+  right: 20px;
+  bottom: 20px;
+  color: var(--mm-text);
+  font: 14px/1.45 system-ui, sans-serif;
 }
 
-#marketmute-manager button {
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
+#marketmute-manager *,
+#marketmute-manager *::before,
+#marketmute-manager *::after {
+  box-sizing: border-box;
+}
+
+#marketmute-manager button,
+#marketmute-manager input {
   font: inherit;
 }
 
+#marketmute-manager button {
+  cursor: pointer;
+}
+
+#marketmute-manager button:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
 #marketmute-manager .marketmute-toggle {
-  max-width: 420px;
-  overflow: hidden;
-  padding: 9px 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 13px;
   color: #fff;
-  background: #242526;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 30%);
+  background: #242833;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 18%);
+  font-weight: 600;
+}
+
+#marketmute-manager .marketmute-count {
+  min-width: 25px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 14%);
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 #marketmute-manager .marketmute-panel {
-  position: absolute;
-  right: 0;
-  bottom: 44px;
-  width: 260px;
-  max-height: 320px;
+  position: fixed;
+  inset: auto 20px 72px auto;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(520px, calc(100dvh - 100px));
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--mm-line);
+  border-radius: 18px;
+  color: var(--mm-text);
+  background: var(--mm-bg);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 18%), 0 2px 8px rgb(0 0 0 / 8%);
+  font: inherit;
   overflow: auto;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 4px 18px rgb(0 0 0 / 25%);
 }
 
-#marketmute-manager .marketmute-panel > div {
+#marketmute-manager .marketmute-panel:popover-open {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  animation: marketmute-arrive .16s ease-out;
+}
+
+#marketmute-manager .marketmute-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 16px;
+}
+
+#marketmute-manager h2 {
+  margin: 0;
+  color: var(--mm-text);
+  font: 650 17px/1.3 system-ui, sans-serif;
+  letter-spacing: -.25px;
+}
+
+#marketmute-manager .marketmute-header p {
+  margin: 5px 0 0;
+  color: var(--mm-muted);
+  font-size: 12px;
+}
+
+#marketmute-manager .marketmute-close {
+  flex: 0 0 32px;
+  height: 32px;
+  margin: -5px -7px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--mm-muted);
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+}
+
+#marketmute-manager .marketmute-search {
+  flex-shrink: 0;
+  width: calc(100% - 40px);
+  min-height: 38px;
+  margin: 0 20px 12px;
+  padding: 8px 11px;
+  border: 1px solid var(--mm-line);
+  border-radius: 9px;
+  color: var(--mm-text);
+  background: var(--mm-subtle);
+  font-size: 13px;
+}
+
+#marketmute-manager .marketmute-search::placeholder {
+  color: var(--mm-muted);
+  opacity: 1;
+}
+
+#marketmute-manager .marketmute-list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px;
+}
+
+#marketmute-manager .marketmute-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px;
+  gap: 14px;
+  padding: 12px 8px;
+  border-top: 1px solid var(--mm-line);
 }
 
-#marketmute-manager .marketmute-panel button {
-  padding: 5px 8px;
-  color: #fff;
-  background: #65676b;
+#marketmute-manager .marketmute-row[hidden] {
+  display: none;
 }
 
-#marketmute-manager button:focus-visible,
+#marketmute-manager .marketmute-row:first-child {
+  border-top: 0;
+}
+
+#marketmute-manager .marketmute-seller {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#marketmute-manager .marketmute-name {
+  overflow-wrap: anywhere;
+  color: var(--mm-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#marketmute-manager a.marketmute-name:hover {
+  color: var(--mm-accent);
+  text-decoration: underline;
+}
+
+#marketmute-manager .marketmute-listing-count {
+  color: var(--mm-muted);
+  font-size: 11px;
+}
+
+#marketmute-manager .marketmute-unmute {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--mm-line);
+  border-radius: 8px;
+  color: var(--mm-text);
+  background: var(--mm-bg);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+#marketmute-manager .marketmute-unmute:hover,
+#marketmute-manager .marketmute-close:hover {
+  background: var(--mm-subtle);
+}
+
+#marketmute-manager .marketmute-status {
+  margin: 0;
+  padding: 16px 20px;
+  color: var(--mm-muted);
+  font-size: 13px;
+}
+
+#marketmute-manager .marketmute-status:empty {
+  display: none;
+}
+
+#marketmute-manager footer {
+  flex-shrink: 0;
+  margin-top: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--mm-line);
+  color: var(--mm-muted);
+  font-size: 11px;
+}
+
+#marketmute-manager :is(button, input, a):focus-visible,
 .marketmute-mute:focus-visible {
-  outline: 3px solid #2e89ff;
+  outline: 3px solid #6486f6;
   outline-offset: 2px;
+}
+
+.marketmute-mute,
+#marketmute-manager button {
+  overflow: hidden;
+  transition: transform .14s ease, background-color .16s ease;
+}
+
+#marketmute-manager button {
+  position: relative;
+}
+
+.marketmute-mute::after,
+#marketmute-manager button::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  left: var(--mm-pointer-x, 50%);
+  top: var(--mm-pointer-y, 50%);
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, currentColor, transparent);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.45);
+  transition: opacity .2s ease, transform .4s ease-out;
+}
+
+.marketmute-mute:not(:disabled):hover::after,
+#marketmute-manager button:not(:disabled):hover::after {
+  opacity: .14;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.marketmute-mute:not(:disabled):active,
+#marketmute-manager button:not(:disabled):active {
+  transform: scale(.98);
+}
+
+.marketmute-mute:not(:disabled):active::after,
+#marketmute-manager button:not(:disabled):active::after {
+  opacity: .24;
+  transform: translate(-50%, -50%) scale(1.6);
+}
+
+@keyframes marketmute-arrive {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketmute-mute,
+  #marketmute-manager button {
+    transition: none;
+    transform: none !important;
+  }
+
+  .marketmute-mute::after,
+  #marketmute-manager button::after {
+    display: none;
+  }
+
+  #marketmute-manager .marketmute-panel:popover-open {
+    animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  #marketmute-manager {
+    --mm-bg: #24262c;
+    --mm-text: #ecedf0;
+    --mm-muted: #a7adbb;
+    --mm-line: #3a3d46;
+    --mm-subtle: #2e3139;
+    --mm-accent: #a4b9ff;
+  }
 }

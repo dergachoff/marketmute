@@ -16,8 +16,13 @@
       "world": "MAIN"
     },
     {
+      "matches": ["https://www.facebook.com/marketplace/*"],
+      "js": ["core.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    },
+    {
       "matches": [
-        "https://www.facebook.com/marketplace/*",
         "https://*.dubizzle.com/classified/*",
         "https://*.dubizzle.com/*/classified/*"
       ],
