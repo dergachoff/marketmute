@@ -255,6 +255,8 @@
   }
 
   function decorate(link) {
+    if (!IS_DUBIZZLE && (!link.closest('main, [role="main"]') ||
+      link.closest('[role="dialog"], [role="complementary"]'))) return;
     const id = MarketMute.listingIdFromUrl(link.href);
     if (!id) return;
     const sellerId =
@@ -341,6 +343,60 @@
     for (const link of links) decorate(link);
   }
 
+  function makeManagerMovable(manager) {
+    const toggle = manager.querySelector(".marketmute-toggle");
+    const panel = manager.querySelector(".marketmute-panel");
+    let drag = null;
+    let dragged = false;
+    const move = (x, y) => {
+      const bounds = toggle.getBoundingClientRect();
+      manager.style.left = `${Math.max(8, Math.min(x, innerWidth - bounds.width - 8))}px`;
+      manager.style.top = `${Math.max(8, Math.min(y, innerHeight - bounds.height - 8))}px`;
+      manager.style.bottom = "auto";
+      if (panel.matches(":popover-open")) {
+        const anchor = toggle.getBoundingClientRect();
+        panel.style.left = `${Math.max(8, Math.min(anchor.left, innerWidth - panel.offsetWidth - 8))}px`;
+        panel.style.top = `${Math.max(8, Math.min(anchor.top - panel.offsetHeight - 8, innerHeight - panel.offsetHeight - 8))}px`;
+        panel.style.bottom = "auto";
+      }
+    };
+    const clamp = () => {
+      const bounds = toggle.getBoundingClientRect();
+      move(bounds.left, bounds.top);
+    };
+    toggle.title = "Drag to move, or focus and use arrow keys";
+    toggle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || !event.isPrimary) return;
+      const bounds = toggle.getBoundingClientRect();
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: bounds.left, top: bounds.top };
+      dragged = false;
+      toggle.setPointerCapture(event.pointerId);
+    });
+    toggle.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      if (Math.hypot(dx, dy) > 5) dragged = true;
+      if (dragged) move(drag.left + dx, drag.top + dy);
+    });
+    toggle.addEventListener("lostpointercapture", () => { drag = null; });
+    toggle.addEventListener("click", (event) => {
+      if (!dragged || event.detail === 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      dragged = false;
+    });
+    toggle.addEventListener("keydown", (event) => {
+      const delta = { ArrowLeft: [-20, 0], ArrowRight: [20, 0], ArrowUp: [0, -20], ArrowDown: [0, 20] }[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      const bounds = toggle.getBoundingClientRect();
+      move(bounds.left + delta[0], bounds.top + delta[1]);
+    });
+    panel.addEventListener("toggle", clamp);
+    window.addEventListener("resize", clamp);
+  }
+
   function renderManager() {
     let manager = document.getElementById("marketmute-manager");
     if (!manager) {
@@ -363,6 +419,7 @@
         </section>`;
       manager.querySelector(".marketmute-search").addEventListener("input", () => filterMuted());
       document.body.append(manager);
+      makeManagerMovable(manager);
     }
 
     const entries = Object.entries(mutedSellers);

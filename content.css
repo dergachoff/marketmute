@@ -90,7 +90,8 @@
   --mm-accent: #3659cb;
   position: fixed;
   z-index: 2147483647;
-  right: 20px;
+  width: max-content;
+  left: 20px;
   bottom: 20px;
   color: var(--mm-text);
   font: 14px/1.45 system-ui, sans-serif;
@@ -117,6 +118,8 @@
 }
 
 #marketmute-manager .marketmute-toggle {
+  touch-action: none;
+  user-select: none;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -142,7 +145,7 @@
 
 #marketmute-manager .marketmute-panel {
   position: fixed;
-  inset: auto 20px 72px auto;
+  inset: auto auto 72px 20px;
   width: min(360px, calc(100vw - 32px));
   max-height: min(520px, calc(100dvh - 100px));
   margin: 0;
@@ -339,7 +342,7 @@
 }
 
 .marketmute-mute:not(:disabled):active,
-#marketmute-manager button:not(:disabled):active {
+#marketmute-manager button:not(.marketmute-toggle):not(:disabled):active {
   transform: scale(.98);
 }
 

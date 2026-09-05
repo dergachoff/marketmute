@@ -19,7 +19,7 @@ On Facebook Marketplace, hovering is passive and only highlights visible exact-m
 
 Muted sellers are stored in `browser.storage.local`.
 
-Use **MarketMute** in the bottom-right corner to search and unmute sellers, or open their Facebook profiles. Older Facebook entries without verified names display a seller ID; matching that seller again refreshes the name. Escape or clicking outside closes the panel.
+Use **MarketMute** in the bottom-left corner to search and unmute sellers, or open their Facebook profiles. Older Facebook entries without verified names display a seller ID; matching that seller again refreshes the name. Drag the MarketMute button to move it, or focus it and use the arrow keys. Its position resets on reload. Escape or clicking outside closes the panel.
 
 ## Limits
 
@@ -35,3 +35,5 @@ Use **MarketMute** in the bottom-right corner to search and unmute sellers, or o
 node test.js
 npx --yes web-ext lint --source-dir .
 ```
+
+For the browser UI regression check, run `python3 -m http.server 8765 --bind 127.0.0.1` and open `http://127.0.0.1:8765/test-ui.html`. The page reports PASS or FAIL using the real content scripts with extension storage mocked.

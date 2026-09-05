@@ -37,6 +37,7 @@
     let candidate = link;
     for (let depth = 0; depth < 9 && current.parentElement; depth += 1) {
       const parent = current.parentElement;
+      if (parent.matches?.('body, main, [role="main"], [role="dialog"], [role="complementary"]')) break;
       const siteChildren = [...parent.children].filter((child) => !child.classList?.contains("marketmute-mute"));
       if (parent.querySelectorAll(selector).length !== 1 || (stopAtSibling && siteChildren.length !== 1)) break;
       candidate = parent;

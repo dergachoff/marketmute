@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MarketMute UI regression check</title>
+<link rel="stylesheet" href="content.css">
+<style>
+  body { font: 16px system-ui; background: #222; color: white; }
+  main { display: flex; gap: 24px; }
+  article { width: 220px; height: 240px; background: #444; padding: 16px; }
+  a { color: white; }
+  [role=dialog] { position: fixed; right: 20px; bottom: 0; width: 330px; height: 420px; background: #333; }
+  #close { position: absolute; right: 8px; top: 8px; }
+  #compose { position: absolute; bottom: 20px; right: 0; width: 300px; height: 42px; }
+  #destination { position: fixed; left: 280px; top: 330px; }
+</style>
+<main>
+  <article><a href="https://www.facebook.com/marketplace/item/101/">AED 500 · Example watch</a></article>
+  <article><a href="https://www.facebook.com/marketplace/item/102/">AED 600 · Example clock</a></article>
+</main>
+<div role="dialog" aria-label="Chat" id="chat">
+  <a href="https://www.facebook.com/marketplace/item/101/">Marketplace · Example watch</a>
+  <button id="close">Close chat</button>
+  <input id="compose" aria-label="Message">
+</div>
+<div id="destination">Drag destination</div>
+<pre id="result">Running…</pre>
+<script src="test-ui.js"></script>
+<script src="core.js"></script>
+<script src="content.js"></script>
