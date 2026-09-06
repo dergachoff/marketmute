@@ -144,6 +144,7 @@
 }
 
 #marketmute-manager .marketmute-panel {
+  display: none;
   position: fixed;
   inset: auto auto 72px 20px;
   width: min(360px, calc(100vw - 32px));
