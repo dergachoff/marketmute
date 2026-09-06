@@ -10,7 +10,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.dubizzle.com/classified/*", "https://*.dubizzle.com/*/classified/*"],
+      "matches": ["https://*.dubizzle.com/*"],
       "js": ["dubizzle-page.js"],
       "run_at": "document_idle",
       "world": "MAIN"
@@ -22,10 +22,7 @@
       "run_at": "document_end"
     },
     {
-      "matches": [
-        "https://*.dubizzle.com/classified/*",
-        "https://*.dubizzle.com/*/classified/*"
-      ],
+      "matches": ["https://*.dubizzle.com/*"],
       "js": ["core.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"

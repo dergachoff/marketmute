@@ -50,7 +50,7 @@ async function main() {
     if (script.matches.includes("https://www.facebook.com/marketplace/*")) {
       assert.equal(script.run_at, "document_end");
     } else {
-      assert.ok(script.matches.includes("https://*.dubizzle.com/*/classified/*"));
+      assert.deepEqual(script.matches, ["https://*.dubizzle.com/*"], "Dubizzle scripts must cover search and category pages");
       assert.equal(script.run_at, "document_idle");
     }
   }
