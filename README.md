@@ -2,36 +2,49 @@
 
 <img src="icon.png" width="64" height="64" alt="MarketMute: a purple shady-seller mascot with a mute badge">
 
-MarketMute highlights listings from the same seller on Facebook Marketplace and Dubizzle and lets you hide that seller locally without reporting or blocking accounts. No analytics or developer-operated server. Facebook matching opens Facebook pages on request; see [Privacy](PRIVACY.md).
+**A mute button for sellers on Facebook Marketplace and Dubizzle.**
 
-## Install for development
+I built MarketMute because I was tired of searching for watches and scrolling past hundreds of fake-watch listings from the same sellers. It was hard to find what I wanted, so I made a mute button for them.
 
-Requires desktop Firefox 142+ or a compatible Zen release. This is an early release; Firefox for Android and private windows are not supported.
+Hide matched listings from sellers you're tired of seeing, keep your mute list in your browser, and unmute whenever you want. Free and open source for desktop Firefox and Zen.
 
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Select **Load Temporary Add-on**.
-3. Choose `manifest.json` from this directory.
+## Install
+
+[MarketMute on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/marketmute/) is submitted as **0.4.2** and awaiting Mozilla review. Permanent installation requires Mozilla's signed extension; the ZIP attached to the GitHub release is an unsigned upload package.
+
+Requires desktop Firefox 142+ or a compatible Zen release. Android and private windows are not supported.
+
+To try it during review or work on the code:
+
+1. Download and extract the release ZIP, or clone this repository.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Select **Load Temporary Add-on** and choose `manifest.json`.
 4. Open or reload a Facebook Marketplace or Dubizzle search page.
 
-Temporary add-ons must be loaded again after restarting Zen.
+Temporary add-ons must be loaded again after restarting the browser.
 
 ## Use
 
-On Dubizzle, hover a listing to highlight every loaded listing from that seller. Click **Mute seller · N** to hide them. Matching uses seller data already loaded by Dubizzle, so scrolling and hovering make no requests and open no tabs.
+**Dubizzle:** hover a listing to highlight loaded listings from the same seller, then click **Mute seller · N** to hide them. Matching reads data already loaded by Dubizzle; hovering and scrolling make no extra requests.
 
-On Facebook Marketplace, hovering is passive and can highlight cards with identical text; this is a visual hint, not verified seller identity. Click **Match seller** to open a short-lived inactive tab and identify the seller. **Mute seller · N** becomes available as soon as the seller is identified. Additional matches continue loading in the background and are hidden automatically if you mute the seller during the scan.
+**Facebook Marketplace:** click **Match seller**, then **Mute seller · N**. Matching takes a few seconds and briefly opens an inactive Facebook tab to identify the seller. You can mute as soon as the seller is identified; additional matches found during the scan are hidden too. Hovering alone can highlight identical listing text, but does not verify the seller or open tabs.
 
-Muted sellers are stored in `browser.storage.local`.
+Open **MarketMute** in the bottom-left corner to search your muted sellers by name, seller ID, or saved listing title, and unmute them. Available seller names link to their profiles; Dubizzle entries can also include a **View listing** link. If a name is unavailable, the panel shows the seller ID. Opening a Dubizzle listing can fill in missing seller details.
 
-Use **MarketMute** in the bottom-left corner to search by seller name, ID, or saved listing title and unmute sellers, or open their Facebook profiles. Dubizzle business names appear when available; private sellers fall back to a seller ID. New Dubizzle mutes save a listing title and a **View listing** link. Opening a Dubizzle listing naturally lets MarketMute read its seller name and public-profile link; existing mutes are updated, and the seller name becomes clickable. Details for unmuted sellers are remembered only while the background script is running, for use if you mute them later. No extra pages are requested. Older mutes can show a title from matching Dubizzle listings currently loaded on the page. Older Facebook entries without verified names display a seller ID; matching that seller again refreshes the name. Drag the MarketMute button to move it, or focus it and use the arrow keys. Its position resets on reload. Escape or clicking outside closes the panel.
+Drag the MarketMute button to move it, or focus it and use the arrow keys. Its position resets on reload. Escape or clicking outside closes the panel.
+
+## Privacy
+
+Mutes stay in your browser's local storage. Muting changes what you see without reporting sellers, blocking accounts, or changing your marketplace account settings.
+
+There are no analytics or developer-operated servers. Facebook receives normal page requests when you explicitly match a seller or open a profile. See [Privacy](PRIVACY.md) for stored data, website access, and permissions.
 
 ## Limits
 
-- Facebook does not expose seller IDs in search cards, so matching a seller takes a few seconds.
-- MarketMute reads up to 200 currently loaded listings from a seller profile.
+- MarketMute does not detect counterfeit goods or identify every listing automatically.
+- Facebook matching reads up to 200 currently loaded listings from a seller profile.
 - Seller-profile detection currently expects Facebook's English `… listings` heading.
-- Facebook DOM changes may require selector updates.
-- Dubizzle client-data changes may require adapter updates.
+- Changes to Facebook layouts or Dubizzle page data can break matching.
 
 ## Check
 

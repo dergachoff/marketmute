@@ -6,7 +6,7 @@ Run `make package` to test the code, build the ZIP, and validate it with Mozilla
 
 ```sh
 make package
-unzip -l dist/marketmute-0.1.0.zip
+unzip -l dist/marketmute-0.4.2.zip
 ```
 
 The archive contains only the manifest, five JavaScript files, CSS, icon, and license. JavaScript is shipped directly: no transpilation, minification, or runtime dependencies.
@@ -28,10 +28,10 @@ Use ordinary desktop Firefox or Zen, and record the browser version and extensio
 
 1. Update `manifest.json` to a version not previously submitted. Keep the extension ID stable so updates retain local storage.
 2. Commit, push, and require the [CI checks](https://github.com/dergachoff/marketmute/actions) to pass for that commit.
-3. Capture real screenshots without personal account details. Mozilla recommends 1280×800; show matching, muting, and search/unmute.
+3. Capture real screenshots without personal account details. Show matching, muting, and search/unmute; check the upload form for current image limits.
 4. Submit the ZIP through the [Mozilla Developer Hub](https://addons.mozilla.org/developers/). Use the MIT license, [GitHub Issues](https://github.com/dergachoff/marketmute/issues) for support, and the current privacy policy.
 5. Explain the explicit Facebook lookup and the Dubizzle page-data adapter in reviewer notes. Supply any requested testing credentials only through Mozilla's private reviewer channel, never in git.
-6. After approval, add the AMO install link to the README and create a GitHub release for the tested commit. Use Mozilla's signed XPI for permanent installation; the local ZIP is an unsigned upload package.
+6. Tag the tested commit and create its GitHub release. If Mozilla review is pending, say so in the README and release notes and label the ZIP as unsigned. After approval, update the installation status and use Mozilla's signed XPI for permanent installation.
 
 ## Recovery
 
