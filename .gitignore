@@ -6,3 +6,7 @@
 
 /dist/
 /web-ext-artifacts/
+
+/PRODUCT.md
+/.prd/
+/.local/

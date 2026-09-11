@@ -2,7 +2,7 @@
 
 <img src="icon.png" width="64" height="64" alt="MarketMute: a purple shady-seller mascot with a mute badge">
 
-MarketMute highlights listings from the same seller on Facebook Marketplace and Dubizzle, then lets you hide that seller locally. It hides listings in your browser without reporting or blocking accounts. No analytics or developer-operated server. Facebook matching opens Facebook pages on request; see [Privacy](PRIVACY.md).
+MarketMute highlights listings from the same seller on Facebook Marketplace and Dubizzle and lets you hide that seller locally without reporting or blocking accounts. No analytics or developer-operated server. Facebook matching opens Facebook pages on request; see [Privacy](PRIVACY.md).
 
 ## Install for development
 
@@ -42,7 +42,6 @@ make package
 
 For the browser UI regression check, run `python3 -m http.server 8765 --bind 127.0.0.1` and open `http://127.0.0.1:8765/test-ui.html`. The page reports PASS or FAIL using the real content scripts with extension storage mocked.
 
-
 `make package` requires Node.js, npm, Make, and zip. It runs the tests, packages only the extension files and license into `dist/marketmute-<version>.zip`, and runs Mozilla's validator against that archive. It downloads the pinned web-ext validator through npm; no dependencies ship in the extension.
 
 ## Project structure
@@ -52,6 +51,10 @@ For the browser UI regression check, run `python3 -m http.server 8765 --bind 127
 - `dubizzle-page.js`: reads listing data already held by the page and passes minimal metadata through DOM attributes.
 - `resolver.js`: explicit Facebook seller lookup and temporary-tab cleanup.
 - `background.js`: serialized local storage writes and late match updates.
+
+## Development principles
+
+Keep browsing passive: seller lookups require an explicit action. Muting must stay local and reversible. Preserve keyboard access, visible focus, and reduced-motion support.
 
 ## Reporting a problem
 
