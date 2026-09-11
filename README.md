@@ -23,7 +23,7 @@ On Facebook Marketplace, hovering is passive and can highlight cards with identi
 
 Muted sellers are stored in `browser.storage.local`.
 
-Use **MarketMute** in the bottom-left corner to search by seller name, ID, or saved listing title and unmute sellers, or open their Facebook profiles. Dubizzle business names appear when available; private sellers fall back to a seller ID. New mutes save a listing title for recognition. Older mutes can show a title from matching Dubizzle listings currently loaded on the page. Older Facebook entries without verified names display a seller ID; matching that seller again refreshes the name. Drag the MarketMute button to move it, or focus it and use the arrow keys. Its position resets on reload. Escape or clicking outside closes the panel.
+Use **MarketMute** in the bottom-left corner to search by seller name, ID, or saved listing title and unmute sellers, or open their Facebook profiles. Dubizzle business names appear when available; private sellers fall back to a seller ID. New Dubizzle mutes save a listing title and a **View listing** link. Opening a Dubizzle listing naturally lets MarketMute read its seller name and public-profile link; existing mutes are updated, and the seller name becomes clickable. Details for unmuted sellers are remembered only while the background script is running, for use if you mute them later. No extra pages are requested. Older mutes can show a title from matching Dubizzle listings currently loaded on the page. Older Facebook entries without verified names display a seller ID; matching that seller again refreshes the name. Drag the MarketMute button to move it, or focus it and use the arrow keys. Its position resets on reload. Escape or clicking outside closes the panel.
 
 ## Limits
 

@@ -2,6 +2,7 @@
 
 const resolver = MarketMuteResolver.createResolver(browser);
 const matchedSellers = new Map();
+const visitedDubizzleSellers = new Map();
 let pendingWrite = Promise.resolve();
 
 function updateMuted(type, result, storageKey = "mutedSellers") {
@@ -12,12 +13,17 @@ function updateMuted(type, result, storageKey = "mutedSellers") {
     }
     const muted = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
     const existing = muted[result.sellerId];
+    const visited = storageKey === "mutedDubizzleSellers" ? visitedDubizzleSellers.get(result.sellerId) : null;
     if (type === "unmute") {
       delete muted[result.sellerId];
     } else if (type === "mute" || existing) {
       muted[result.sellerId] = {
-        name: result.sellerName,
+        name: visited?.sellerName || (existing?.profileUrl ? existing.name : result.sellerName),
         nameVerified: true,
+        ...(storageKey === "mutedDubizzleSellers" ? {
+          profileUrl: MarketMute.dubizzleUrl(visited?.profileUrl || existing?.profileUrl, "profile"),
+          listingUrl: (result.itemIds.includes(MarketMute.listingIdFromUrl(result.listingUrl)) && MarketMute.dubizzleUrl(result.listingUrl)) || MarketMute.dubizzleUrl(existing?.listingUrl),
+        } : {}),
         listingTitle: (typeof result.listingTitle === "string" && result.listingTitle.trim().slice(0, 300)) || existing?.listingTitle || "",
         itemIds: [...new Set([...(Array.isArray(existing?.itemIds) ? existing.itemIds : []), ...result.itemIds])].filter(MarketMute.isListingId),
       };
@@ -31,6 +37,19 @@ function updateMuted(type, result, storageKey = "mutedSellers") {
 }
 
 browser.runtime.onMessage.addListener((message, sender) => {
+  if (message?.type === "marketmute:dubizzle-visited") {
+    const result = message.result;
+    const listingUrl = MarketMute.dubizzleUrl(sender.url);
+    if (!listingUrl || listingUrl !== MarketMute.dubizzleUrl(result?.listingUrl) ||
+        !MarketMute.isId(result?.sellerId) || typeof result?.sellerName !== "string" ||
+        !MarketMute.dubizzleUrl(result?.profileUrl, "profile") || !Array.isArray(result?.itemIds) ||
+        result.itemIds.length !== 1 || result.itemIds[0] !== MarketMute.listingIdFromUrl(listingUrl)) {
+      return Promise.resolve({ error: "Invalid Dubizzle seller data" });
+    }
+    visitedDubizzleSellers.set(result.sellerId, result);
+    return updateMuted("enrich", result, "mutedDubizzleSellers")
+      .then(() => ({ ok: true })).catch((error) => ({ error: error.message }));
+  }
   if (message?.type === "marketmute:resolve") {
     return resolver.resolveListing(message.url, (result) => {
       if (sender.tab?.id != null) {

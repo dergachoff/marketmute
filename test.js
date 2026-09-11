@@ -93,6 +93,25 @@ async function main() {
     ["10", "11", "12"],
   );
 
+  const detailUrl = 'https://dubai.dubizzle.com/classified/example---0123456789abcdef0123456789abcdef/';
+  const profileUrl = 'https://uae.dubizzle.com/public-profile/11111111-2222-4333-8444-555555555555/';
+  const detailData = { props: { pageProps: { reduxWrapperActionsGIPP: [{ payload: {
+    listing: { uuid: '0123456789abcdef0123456789abcdef', name: 'Example watch' },
+    lister: { id: '11111111-2222-4333-8444-555555555555', legacy_id: 51, name: 'Example Seller' },
+  } }] } } };
+  assert.equal(core.dubizzleSellerFromData(detailData, detailUrl).profileUrl, profileUrl);
+  assert.equal(core.dubizzleSellerFromData(detailData, detailUrl).sellerId, '51');
+  assert.equal(core.dubizzleSellerFromData(detailData.props.pageProps.reduxWrapperActionsGIPP[0].payload, detailUrl).profileUrl, profileUrl);
+  for (const missing of [null, {}, { props: { pageProps: { reduxWrapperActionsGIPP: {} } } }]) {
+    assert.equal(core.dubizzleSellerFromData(missing, detailUrl), null);
+  }
+  assert.equal(core.dubizzleSellerFromData(detailData, detailUrl.replace('012345', 'abcdef')), null, 'Stale page data must not identify a different listing');
+  for (const url of ['javascript:alert(1)', 'https://dubizzle.com.evil.test/classified/x---0123456789abcdef0123456789abcdef/', detailUrl.replace('https:', 'http:'), detailUrl.replace('dubai.', 'user:pass@dubai.')]) {
+    assert.equal(core.dubizzleUrl(url), '');
+  }
+  assert.equal(core.dubizzleUrl(detailUrl + '?tracking=1#fragment'), detailUrl);
+  assert.equal(core.dubizzleUrl(profileUrl, 'profile'), profileUrl);
+
   const browser = fakeBrowser();
   const resolver = createResolver(browser, core, 100);
   const [first, second] = await Promise.all([
@@ -193,8 +212,12 @@ async function main() {
   const listingLink = { href: `https://dubai.dubizzle.com/classified/example---${listing.uuid}/`, dataset: {},
     __reactProps$test: { listing, unrelated: { ...listing, user_id: 99, uuid: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } } };
   let scanListings;
+  let profileLink = null;
+  const pageElement = { dataset: {} };
+  const pageLocation = new URL(detailUrl);
   vm.runInNewContext(fs.readFileSync(require.resolve("./dubizzle-page.js"), "utf8"), {
-    document: { addEventListener() {}, querySelectorAll: () => [listingLink], documentElement: {}, dispatchEvent() {} },
+    document: { querySelector: () => profileLink, querySelectorAll: () => [listingLink], documentElement: pageElement, dispatchEvent() {} },
+    location: pageLocation,
     MutationObserver: class { constructor(callback) { scanListings = callback; } observe() {} },
     CustomEvent: class {}, queueMicrotask: (callback) => callback(),
   });
@@ -218,6 +241,21 @@ async function main() {
   listingLink.href = 'https://dubai.dubizzle.com/classified/example---bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/';
   scanListings();
   assert.ok(Object.values(listingLink.dataset).every(value => value === ''), 'URL reuse must clear metadata until matching props arrive');
+
+  const pageDetail = { uuid: '0123456789abcdef0123456789abcdef', name: 'Current listing', lister: {
+    id: '11111111-2222-4333-8444-555555555555', legacyId: 51, name: 'Current Seller',
+  } };
+  const pageStore = { getState: () => ({ listings: { detail: { data: pageDetail } } }) };
+  profileLink = { href: profileUrl, __reactFiber$test: { return: { memoizedProps: { value: { store: pageStore } } } } };
+  scanListings();
+  assert.equal(core.dubizzleSellerFromData(JSON.parse(pageElement.dataset.marketmuteDetail), detailUrl).sellerName, 'Current Seller');
+  pageLocation.href = detailUrl.replace('012345', 'abcdef');
+  scanListings();
+  assert.equal(pageElement.dataset.marketmuteDetail, '', 'Client navigation must reject stale store data');
+  pageLocation.href = detailUrl;
+  pageStore.getState = () => { throw Error('Store unavailable'); };
+  scanListings();
+  assert.equal(pageElement.dataset.marketmuteDetail, '');
 
   let pointerMove;
   const motion = { matches: false };
@@ -319,6 +357,30 @@ async function checkBackground() {
     result: { sellerId, sellerName: `Example ${sellerId}`, itemIds: ["0123456789abcdef0123456789abcdef"] },
   }, { tab: { id: 9 } });
   await Promise.all([dubizzle("mute", "51"), dubizzle("mute", "52")]);
+  const listingUrl = 'https://dubai.dubizzle.com/classified/example---0123456789abcdef0123456789abcdef/';
+  const profileUrl = 'https://uae.dubizzle.com/public-profile/11111111-2222-4333-8444-555555555555/';
+  const visit = (sellerId = '51', url = listingUrl) => onMessage({ type: 'marketmute:dubizzle-visited', result: {
+    sellerId, sellerName: 'Verified Example', itemIds: ['0123456789abcdef0123456789abcdef'],
+    listingUrl, profileUrl, listingTitle: 'Visited example watch',
+  } }, { url });
+  assert.equal((await visit()).ok, true);
+  assert.equal(stored.mutedDubizzleSellers['51'].profileUrl, profileUrl);
+  assert.equal(stored.mutedDubizzleSellers['51'].listingUrl, listingUrl);
+  await dubizzle('mute', '51');
+  assert.equal(stored.mutedDubizzleSellers['51'].name, 'Verified Example', 'Card fallback must preserve visited identity');
+  assert.equal(stored.mutedDubizzleSellers['51'].profileUrl, profileUrl);
+  assert.match((await visit('51', 'https://evil.test/')).error, /Invalid/);
+  await visit('53');
+  assert.equal(stored.mutedDubizzleSellers['53'], undefined, 'Visiting must not create a mute or persist an unmuted seller');
+  await dubizzle('mute', '53');
+  assert.equal(stored.mutedDubizzleSellers['53'].profileUrl, profileUrl, 'Visit before mute should enrich identity');
+  await dubizzle('unmute', '53');
+  await visit('53');
+  assert.equal(stored.mutedDubizzleSellers['53'], undefined, 'Late visit must not undo unmute');
+  failWrite = true;
+  assert.match((await visit()).error, /Storage unavailable/);
+  failWrite = false;
+  assert.equal((await visit()).ok, true);
   await Promise.all([dubizzle("unmute", "51"), dubizzle("unmute", "52")]);
   assert.deepEqual(stored.mutedDubizzleSellers, {});
   assert.ok(stored.mutedSellers["42"], "Dubizzle writes must leave Facebook mutes intact");

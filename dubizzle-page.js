@@ -50,8 +50,29 @@
     return null;
   }
 
+  function publishDetail() {
+    const link = document.querySelector('a[data-testid="name"][href*="/public-profile/"]');
+    let fiber = link?.[Object.keys(link).find((key) => key.startsWith("__reactFiber$"))];
+    let payload = "";
+    for (let depth = 0; fiber && depth < 100; depth += 1, fiber = fiber.return) {
+      const store = fiber.memoizedProps?.store || fiber.memoizedProps?.value?.store;
+      if (typeof store?.getState !== "function") continue;
+      let detail;
+      try { detail = store.getState()?.listings?.detail?.data; } catch { break; }
+      const id = location.href.match(/---([a-f\d]{32})\/?(?:[?#].*)?$/i)?.[1];
+      if (id && detail?.uuid === id && link.href.endsWith(`/public-profile/${detail.lister?.id}/`)) {
+        payload = JSON.stringify({ listing: { uuid: id, name: detail.name },
+          lister: { id: detail.lister.id, legacy_id: detail.lister.legacyId, name: detail.lister.name } });
+      }
+      break;
+    }
+    if (document.documentElement.dataset.marketmuteDetail === payload) return false;
+    document.documentElement.dataset.marketmuteDetail = payload;
+    return true;
+  }
+
   function scan() {
-    let changed = false;
+    let changed = publishDetail();
     for (const link of document.querySelectorAll(SELECTOR)) {
       const listing = listingFor(link);
       const metadata = {

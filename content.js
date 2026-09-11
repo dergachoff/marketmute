@@ -11,6 +11,7 @@
   let mutedItemIds = new Set();
   let hoveredListingId = null;
   let highlightedIds = new Set();
+  let visitedDetail = "";
 
   const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -121,6 +122,8 @@
           {
             name: typeof seller.name === "string" ? seller.name : `Seller ${sellerId}`,
             nameVerified: seller.nameVerified === true,
+            profileUrl: IS_DUBIZZLE ? MarketMute.dubizzleUrl(seller.profileUrl, "profile") : "",
+            listingUrl: IS_DUBIZZLE ? MarketMute.dubizzleUrl(seller.listingUrl) : "",
             listingTitle: typeof seller.listingTitle === "string" ? seller.listingTitle.trim().slice(0, 300) : "",
             itemIds: Array.isArray(seller.itemIds) ? seller.itemIds.filter(MarketMute.isListingId) : [],
           },
@@ -249,7 +252,8 @@
 
   async function mute(state) {
     const listingTitle = state.link.dataset.marketmuteListingTitle || state.link.querySelector("h2")?.textContent || state.link.querySelector("img[alt]")?.alt || "";
-    const result = { ...await resolveCard(state), listingTitle };
+    const listingUrl = IS_DUBIZZLE ? MarketMute.dubizzleUrl(state.link.href) : "";
+    const result = { ...await resolveCard(state), listingTitle, listingUrl };
     const response = await browser.runtime.sendMessage({ type: "marketmute:mute", result, storageKey: STORAGE_KEY });
     if (response?.error) throw new Error(response.error);
   }
@@ -352,6 +356,23 @@
     card.classList.toggle("marketmute-related", highlightedIds.has(id));
   }
 
+  function rememberDubizzleSeller() {
+    const raw = document.documentElement.dataset.marketmuteDetail || document.getElementById("__NEXT_DATA__")?.textContent;
+    if (!raw) return;
+    const key = location.href + "\n" + raw;
+    if (visitedDetail === key) return;
+    visitedDetail = key;
+    let result;
+    try { result = MarketMute.dubizzleSellerFromData(JSON.parse(raw), location.href); } catch { return; }
+    if (!result) return;
+    browser.runtime.sendMessage({ type: "marketmute:dubizzle-visited", result })
+      .then((response) => { if (response?.error) throw new Error(response.error); })
+      .catch((error) => {
+        if (visitedDetail === key) visitedDetail = "";
+        console.warn("MarketMute could not save seller details:", error.message);
+      });
+  }
+
   function scan(root = document) {
     const manager = document.getElementById("marketmute-manager");
     const detail = isDetailPage();
@@ -360,7 +381,10 @@
       const panel = manager.querySelector(".marketmute-panel");
       if (detail && panel.matches(":popover-open")) panel.hidePopover();
     }
-    if (detail) return;
+    if (detail) {
+      if (IS_DUBIZZLE) rememberDubizzleSeller();
+      return;
+    }
     const links = [];
     if (root instanceof Element && root.matches(ITEM_SELECTOR)) links.push(root);
     links.push(...root.querySelectorAll(ITEM_SELECTOR));
@@ -465,15 +489,16 @@
       row.dataset.sellerId = sellerId;
       const details = document.createElement("div");
       details.className = "marketmute-seller";
-      const name = document.createElement(IS_DUBIZZLE ? "span" : "a");
+      const profileUrl = IS_DUBIZZLE ? seller.profileUrl : MarketMute.sellerUrl(sellerId);
+      const name = document.createElement(profileUrl ? "a" : "span");
       name.className = "marketmute-name";
       const loaded = [...cards.values()].find((state) => state.card.isConnected &&
         (state.sellerId === sellerId || seller.itemIds.includes(state.id)));
-      const sellerName = (IS_DUBIZZLE && loaded?.link.dataset.marketmuteSellerName) ||
+      const sellerName = (seller.profileUrl && seller.name) || (IS_DUBIZZLE && loaded?.link.dataset.marketmuteSellerName) ||
         ((IS_DUBIZZLE || seller.nameVerified) ? seller.name.trim() : "");
       name.textContent = !sellerName || /^(?:Dubizzle seller |Seller #?)\d+$/.test(sellerName) ? `Seller #${sellerId}` : sellerName;
-      if (!IS_DUBIZZLE) {
-        name.href = MarketMute.sellerUrl(sellerId);
+      if (profileUrl) {
+        name.href = profileUrl;
         name.target = "_blank";
         name.rel = "noopener noreferrer";
         name.title = "Open seller profile in a new tab";
@@ -485,6 +510,17 @@
         listing.className = "marketmute-listing-title";
         listing.textContent = listingTitle;
         details.append(listing);
+      }
+      const listingUrl = seller.listingUrl || (IS_DUBIZZLE && MarketMute.dubizzleUrl(loaded?.link.href));
+      if (listingUrl) {
+        const link = document.createElement("a");
+        link.className = "marketmute-listing-link";
+        link.href = listingUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "View listing";
+        link.setAttribute("aria-label", `View listing from ${name.textContent} in a new tab`);
+        details.append(link);
       }
       const unmute = document.createElement("button");
       unmute.type = "button";
