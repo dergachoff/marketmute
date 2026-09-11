@@ -73,7 +73,7 @@
         candidate.promise?.id === candidate.id && result.itemIds.includes(candidate.id),
       );
       if (!state) return undefined;
-      const resolved = cacheResult({ ...result, itemIds: [...result.itemIds, ...visibleBundleIds(state)] });
+      const resolved = cacheResult(result);
       showResolved(resolved);
       state.button.disabled = false;
       state.button.setAttribute("aria-busy", "false");
@@ -91,11 +91,9 @@
     return undefined;
   });
 
-  if (
-    (!IS_DUBIZZLE && /^\/marketplace\/(?:item|profile)\//.test(location.pathname)) ||
-    (IS_DUBIZZLE && MarketMute.listingIdFromUrl(location.href))
-  ) {
-    return;
+  function isDetailPage() {
+    return IS_DUBIZZLE ? Boolean(MarketMute.listingIdFromUrl(location.href)) :
+      /^\/marketplace\/(?:item|profile)\//.test(location.pathname);
   }
 
   if (IS_DUBIZZLE) {
@@ -123,6 +121,7 @@
           {
             name: typeof seller.name === "string" ? seller.name : `Seller ${sellerId}`,
             nameVerified: seller.nameVerified === true,
+            listingTitle: typeof seller.listingTitle === "string" ? seller.listingTitle.trim().slice(0, 300) : "",
             itemIds: Array.isArray(seller.itemIds) ? seller.itemIds.filter(MarketMute.isListingId) : [],
           },
         ]),
@@ -201,7 +200,7 @@
     const listingId = state.id;
     const cached = resolvedItems.get(listingId);
     if (cached && !state.needsRetry) {
-      const result = cacheResult({ ...cached, itemIds: [...cached.itemIds, ...visibleBundleIds(state)] });
+      const result = cacheResult(cached);
       showResolved(result);
       if (hoveredListingId === listingId) applyHighlight(result);
       return result;
@@ -222,7 +221,7 @@
         if (!MarketMute.isId(result?.sellerId) || !Array.isArray(result.itemIds)) {
           throw new Error("Seller lookup returned invalid data");
         }
-        const resolved = cacheResult({ ...result, itemIds: [...result.itemIds, ...(state.id === listingId ? visibleBundleIds(state) : [])] });
+        const resolved = cacheResult(result);
         showResolved(resolved);
         if (state.id === listingId && hoveredListingId === listingId) applyHighlight(resolved);
         return resolved;
@@ -249,7 +248,8 @@
   }
 
   async function mute(state) {
-    const result = await resolveCard(state);
+    const listingTitle = state.link.dataset.marketmuteListingTitle || state.link.querySelector("h2")?.textContent || state.link.querySelector("img[alt]")?.alt || "";
+    const result = { ...await resolveCard(state), listingTitle };
     const response = await browser.runtime.sendMessage({ type: "marketmute:mute", result, storageKey: STORAGE_KEY });
     if (response?.error) throw new Error(response.error);
   }
@@ -263,12 +263,26 @@
       IS_DUBIZZLE && MarketMute.isId(link.dataset.marketmuteSellerId)
         ? link.dataset.marketmuteSellerId
         : null;
-    if (IS_DUBIZZLE && !sellerId) return;
-
     const card = MarketMute.findCard(link, ITEM_SELECTOR, IS_DUBIZZLE);
     let state = cards.get(card);
+    if (IS_DUBIZZLE && (!sellerId || link.dataset.marketmuteListingId !== id)) {
+      if (state) {
+        if (hoveredListingId === state.id) {
+          hoveredListingId = null;
+          clearHighlight();
+        }
+        state.id = null;
+        state.sellerId = null;
+        state.promise = null;
+        state.button.remove();
+        card.classList.remove("marketmute-hidden", "marketmute-related", "marketmute-loading", "marketmute-error");
+      }
+      return;
+    }
     if (!state && (card.closest(".marketmute-card") || card.querySelector(".marketmute-card"))) return;
     if (state?.id === id) {
+      state.link = link;
+      state.fingerprint = MarketMute.fingerprint(link.textContent);
       state.sellerId = sellerId;
       if (sellerId) state.sellerName = link.dataset.marketmuteSellerName || `Dubizzle seller ${sellerId}`;
       syncLocalSeller(state);
@@ -307,6 +321,8 @@
         event.preventDefault();
         event.stopPropagation();
         const listingId = state.id;
+        if (MarketMute.listingIdFromUrl(state.link.href) !== listingId ||
+          (IS_DUBIZZLE && state.link.dataset.marketmuteSellerId !== state.sellerId)) return;
         (resolvedItems.has(listingId) && !state.needsRetry ? mute(state) : resolveCard(state)).catch((error) => {
           if (state.id !== listingId) return;
           state.button.title = error.message;
@@ -337,6 +353,14 @@
   }
 
   function scan(root = document) {
+    const manager = document.getElementById("marketmute-manager");
+    const detail = isDetailPage();
+    if (manager) {
+      manager.hidden = detail;
+      const panel = manager.querySelector(".marketmute-panel");
+      if (detail && panel.matches(":popover-open")) panel.hidePopover();
+    }
+    if (detail) return;
     const links = [];
     if (root instanceof Element && root.matches(ITEM_SELECTOR)) links.push(root);
     links.push(...root.querySelectorAll(ITEM_SELECTOR));
@@ -402,6 +426,7 @@
     if (!manager) {
       manager = document.createElement("aside");
       manager.id = "marketmute-manager";
+      manager.hidden = isDetailPage();
       manager.innerHTML = `
         <button type="button" class="marketmute-toggle" popovertarget="marketmute-panel">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 6 6m0-6-6 6"/></svg>
@@ -409,10 +434,10 @@
         </button>
         <section id="marketmute-panel" class="marketmute-panel" popover="auto" aria-labelledby="marketmute-heading">
           <header class="marketmute-header">
-            <div><h2 id="marketmute-heading">Muted sellers</h2><p>A quieter marketplace, just for you.</p></div>
+            <h2 id="marketmute-heading">Muted sellers</h2>
             <button type="button" class="marketmute-close" aria-label="Close muted sellers" popovertarget="marketmute-panel" popovertargetaction="hide">×</button>
           </header>
-          <input class="marketmute-search" type="search" placeholder="Find a muted seller" aria-label="Find a muted seller">
+          <input class="marketmute-search" type="search" placeholder="Search sellers or listings" aria-label="Search muted sellers or listings">
           <div class="marketmute-list"></div>
           <p class="marketmute-status" role="status"></p>
           <footer>Saved in this browser. No accounts blocked.</footer>
@@ -420,6 +445,9 @@
       manager.querySelector(".marketmute-search").addEventListener("input", () => filterMuted());
       document.body.append(manager);
       makeManagerMovable(manager);
+      manager.querySelector(".marketmute-panel").addEventListener("beforetoggle", (event) => {
+        if (event.newState === "open") renderManager();
+      });
     }
 
     const entries = Object.entries(mutedSellers);
@@ -439,17 +467,25 @@
       details.className = "marketmute-seller";
       const name = document.createElement(IS_DUBIZZLE ? "span" : "a");
       name.className = "marketmute-name";
-      name.textContent = IS_DUBIZZLE || seller.nameVerified ? seller.name : `Seller #${sellerId}`;
+      const loaded = [...cards.values()].find((state) => state.card.isConnected &&
+        (state.sellerId === sellerId || seller.itemIds.includes(state.id)));
+      const sellerName = (IS_DUBIZZLE && loaded?.link.dataset.marketmuteSellerName) ||
+        ((IS_DUBIZZLE || seller.nameVerified) ? seller.name.trim() : "");
+      name.textContent = !sellerName || /^(?:Dubizzle seller |Seller #?)\d+$/.test(sellerName) ? `Seller #${sellerId}` : sellerName;
       if (!IS_DUBIZZLE) {
         name.href = MarketMute.sellerUrl(sellerId);
         name.target = "_blank";
         name.rel = "noopener noreferrer";
         name.title = "Open seller profile in a new tab";
       }
-      const count = document.createElement("span");
-      count.className = "marketmute-listing-count";
-      count.textContent = `${seller.itemIds.length} matched listing${seller.itemIds.length === 1 ? "" : "s"}`;
-      details.append(name, count);
+      details.append(name);
+      const listingTitle = seller.listingTitle || loaded?.link.dataset.marketmuteListingTitle;
+      if (listingTitle) {
+        const listing = document.createElement("span");
+        listing.className = "marketmute-listing-title";
+        listing.textContent = listingTitle;
+        details.append(listing);
+      }
       const unmute = document.createElement("button");
       unmute.type = "button";
       unmute.className = "marketmute-unmute";
@@ -480,7 +516,7 @@
     const manager = document.getElementById("marketmute-manager");
     const query = manager.querySelector(".marketmute-search").value.trim().toLocaleLowerCase();
     const rows = [...manager.querySelectorAll(".marketmute-row")];
-    for (const row of rows) row.hidden = !row.querySelector(".marketmute-name").textContent.toLocaleLowerCase().includes(query);
+    for (const row of rows) row.hidden = !`${row.dataset.sellerId} ${row.querySelector(".marketmute-seller").textContent}`.toLocaleLowerCase().includes(query);
     manager.querySelector(".marketmute-status").textContent = !rows.length
       ? "Nothing muted yet. Mute a seller from any listing."
       : rows.every((row) => row.hidden) ? "No sellers match your search." : "";
@@ -490,6 +526,7 @@
     mutedSellers = normalizeMuted((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
     refreshMutedItems();
     scan();
+    window.addEventListener("popstate", () => scan());
 
     new MutationObserver((mutations) => {
       for (const mutation of mutations) {

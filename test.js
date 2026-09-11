@@ -104,6 +104,12 @@ async function main() {
   assert.equal(browser.creates, 1);
   assert.deepEqual(browser.removed, [7]);
 
+  const zeroIdBrowser = fakeBrowser();
+  const createTab = zeroIdBrowser.tabs.create;
+  zeroIdBrowser.tabs.create = async (options) => ({ ...await createTab(options), id: 0 });
+  await createResolver(zeroIdBrowser, core, 100).resolveListing(core.listingUrl("10"));
+  assert.deepEqual(zeroIdBrowser.removed, [0], "Tab ID zero must be cleaned up");
+
   const loadingBrowser = fakeBrowser({ loading: true });
   assert.deepEqual(
     await createResolver(loadingBrowser, core, 100).resolveListing(core.listingUrl("10")),
@@ -137,9 +143,14 @@ async function main() {
   vm.runInNewContext(fs.readFileSync(require.resolve("./content.js"), "utf8"), {
     location: new URL(core.listingUrl("10")),
     MarketMute: core,
-    browser: { runtime: { onMessage: { addListener: (listener) => { onMessage = listener; } } } },
+    browser: {
+      runtime: { onMessage: { addListener: (listener) => { onMessage = listener; } } },
+      storage: { local: { get: () => new Promise(() => {}) } },
+    },
+    matchMedia: () => ({ matches: false }),
+    console,
     setTimeout: (resolve) => setImmediate(() => { identityReady = true; resolve(); }),
-    document: { querySelectorAll: () => [
+    document: { addEventListener() {}, querySelectorAll: () => [
       { href: core.sellerUrl("42"), textContent: "Profile information", closest: () => null },
       ...(identityReady ? [{ href: core.sellerUrl("42"), textContent: "Example Seller", closest: () => ({}) }] : []),
     ] },
@@ -177,6 +188,36 @@ async function main() {
   assert.deepEqual(slowBrowser.removed, [7]);
 
   await checkBackground();
+
+  const listing = { user_id: 51, uuid: "0123456789abcdef0123456789abcdef", name: { en: "Example field watch" }, business: { name: { en: "Example Watches" } } };
+  const listingLink = { href: `https://dubai.dubizzle.com/classified/example---${listing.uuid}/`, dataset: {},
+    __reactProps$test: { listing, unrelated: { ...listing, user_id: 99, uuid: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } } };
+  let scanListings;
+  vm.runInNewContext(fs.readFileSync(require.resolve("./dubizzle-page.js"), "utf8"), {
+    document: { addEventListener() {}, querySelectorAll: () => [listingLink], documentElement: {}, dispatchEvent() {} },
+    MutationObserver: class { constructor(callback) { scanListings = callback; } observe() {} },
+    CustomEvent: class {}, queueMicrotask: (callback) => callback(),
+  });
+  assert.equal(listingLink.dataset.marketmuteSellerId, "51", "Metadata must belong to the URL listing, not another React prop");
+  assert.equal(listingLink.dataset.marketmuteSellerName, "Example Watches");
+  assert.equal(listingLink.dataset.marketmuteListingTitle, "Example field watch");
+  for (const missing of [null, "", { en: 42 }]) {
+    listing.business = { name: missing };
+    listing.name = missing;
+    scanListings();
+    assert.equal(listingLink.dataset.marketmuteSellerName, "", "Reused cards must clear the previous seller name");
+    assert.equal(listingLink.dataset.marketmuteListingTitle, "");
+  }
+
+  listing.business = { name: { ar: "Example Arabic business" } };
+  listing.name = "Hydrated field watch";
+  scanListings();
+  assert.equal(listingLink.dataset.marketmuteSellerName, "Example Arabic business");
+  assert.equal(listingLink.dataset.marketmuteListingTitle, "Hydrated field watch", "Same-UUID hydration must refresh metadata");
+
+  listingLink.href = 'https://dubai.dubizzle.com/classified/example---bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/';
+  scanListings();
+  assert.ok(Object.values(listingLink.dataset).every(value => value === ''), 'URL reuse must clear metadata until matching props arrive');
 
   let pointerMove;
   const motion = { matches: false };
@@ -249,7 +290,7 @@ async function checkBackground() {
     browser, MarketMute: core, MarketMuteResolver: { createResolver },
   });
   const mutate = (type, sellerId = "42") => onMessage({ type: `marketmute:${type}`,
-    result: { sellerId, sellerName: `Example ${sellerId}`, itemIds: ["10"] },
+    result: { sellerId, sellerName: `Example ${sellerId}`, listingTitle: "Example field watch", itemIds: ["10"] },
   }, { tab: { id: 9 } });
   const resolve = () => onMessage({ type: "marketmute:resolve", url: core.listingUrl("10") }, { tab: { id: 9 } });
 
@@ -262,6 +303,7 @@ async function checkBackground() {
   await firstScan;
   assert.deepEqual(stored.mutedSellers["42"].itemIds, ["10", "11"], "Background scan persists matches without the originating page");
   assert.equal(stored.mutedSellers["42"].nameVerified, true);
+  assert.equal(stored.mutedSellers["42"].listingTitle, "Example field watch", "Late profile enrichment must preserve the muted listing title");
 
   const secondScan = resolve();
   await new Promise(setImmediate);

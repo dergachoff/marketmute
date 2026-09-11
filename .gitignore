@@ -3,3 +3,6 @@
 .env.*
 !.env.example
 /AGENTS.md
+
+/dist/
+/web-ext-artifacts/

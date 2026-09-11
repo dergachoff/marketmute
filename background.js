@@ -8,7 +8,7 @@ function updateMuted(type, result, storageKey = "mutedSellers") {
   const write = pendingWrite.then(async () => {
     const stored = (await browser.storage.local.get(storageKey))[storageKey];
     if (storageKey === "mutedSellers" && type !== "unmute" && matchedSellers.has(result.sellerId)) {
-      result = MarketMute.mergeSellerResults(result, matchedSellers.get(result.sellerId));
+      result = { ...MarketMute.mergeSellerResults(result, matchedSellers.get(result.sellerId)), listingTitle: result.listingTitle };
     }
     const muted = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
     const existing = muted[result.sellerId];
@@ -18,6 +18,7 @@ function updateMuted(type, result, storageKey = "mutedSellers") {
       muted[result.sellerId] = {
         name: result.sellerName,
         nameVerified: true,
+        listingTitle: (typeof result.listingTitle === "string" && result.listingTitle.trim().slice(0, 300)) || existing?.listingTitle || "",
         itemIds: [...new Set([...(Array.isArray(existing?.itemIds) ? existing.itemIds : []), ...result.itemIds])].filter(MarketMute.isListingId),
       };
     } else {

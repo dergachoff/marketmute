@@ -3,7 +3,7 @@
 
   const SELECTOR = 'a[href*="/classified/"][href*="---"]';
 
-  function findListing(root) {
+  function findListing(root, listingId) {
     const seen = new WeakSet();
     const stack = [[root, 0]];
 
@@ -15,7 +15,7 @@
       if (
         !Array.isArray(value) &&
         /^\d+$/.test(String(value.user_id)) &&
-        /^[a-f\d]{32}$/i.test(String(value.uuid))
+        String(value.uuid).toLowerCase() === listingId
       ) {
         return value;
       }
@@ -32,17 +32,18 @@
     return null;
   }
 
-  function sellerName(listing) {
-    const name = listing.business?.name;
-    if (typeof name === "string") return name;
-    return name?.en || name?.ar || "";
+  function localizedText(value) {
+    const text = typeof value === "string" ? value : value?.en || value?.ar;
+    return typeof text === "string" ? text.trim().slice(0, 300) : "";
   }
 
   function listingFor(link) {
+    const listingId = link.href.match(/---([a-f\d]{32})\/?(?:[?#].*)?$/i)?.[1].toLowerCase();
+    if (!listingId) return null;
     for (let node = link, depth = 0; node && depth < 6; node = node.parentElement, depth += 1) {
       for (const key of Object.keys(node)) {
         if (!key.startsWith("__reactProps$")) continue;
-        const listing = findListing(node[key]);
+        const listing = findListing(node[key], listingId);
         if (listing) return listing;
       }
     }
@@ -53,12 +54,17 @@
     let changed = false;
     for (const link of document.querySelectorAll(SELECTOR)) {
       const listing = listingFor(link);
-      if (!listing || link.dataset.marketmuteListingId === listing.uuid) continue;
-      link.dataset.marketmuteListingId = listing.uuid;
-      link.dataset.marketmuteSellerId = String(listing.user_id);
-      const name = sellerName(listing);
-      if (name) link.dataset.marketmuteSellerName = name;
-      changed = true;
+      const metadata = {
+        marketmuteListingId: listing?.uuid.toLowerCase() || "",
+        marketmuteSellerId: listing ? String(listing.user_id) : "",
+        marketmuteSellerName: localizedText(listing?.business?.name),
+        marketmuteListingTitle: localizedText(listing?.name),
+      };
+      for (const [key, value] of Object.entries(metadata)) {
+        if (link.dataset[key] === value) continue;
+        link.dataset[key] = value;
+        changed = true;
+      }
     }
     if (changed) document.dispatchEvent(new CustomEvent("marketmute:dubizzle-update"));
   }

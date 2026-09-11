@@ -45,7 +45,7 @@
 
         return { ...initial, itemIds };
       } finally {
-        if (tab?.id) await browserApi.tabs.remove(tab.id).catch(() => {});
+        if (tab?.id != null) await browserApi.tabs.remove(tab.id).catch(() => {});
       }
     }
 
