@@ -1,5 +1,7 @@
 # MarketMute
 
+<img src="icon.png" width="64" height="64" alt="MarketMute: a purple shady-seller mascot with a mute badge">
+
 MarketMute highlights listings from the same seller on Facebook Marketplace and Dubizzle, then lets you hide that seller locally. It hides listings in your browser without reporting or blocking accounts. No analytics or developer-operated server. Facebook matching opens Facebook pages on request; see [Privacy](PRIVACY.md).
 
 ## Install for development
@@ -53,7 +55,7 @@ For the browser UI regression check, run `python3 -m http.server 8765 --bind 127
 
 ## Reporting a problem
 
-Include your Firefox/Zen version, marketplace, steps to reproduce, and expected versus actual behavior. Redact names, messages, and account details from screenshots. Never include cookies, tokens, or a browser-profile export. Marketplace layouts change; a useful reproduction helps more than a full page dump.
+[Open an issue](https://github.com/dergachoff/marketmute/issues) with your Firefox/Zen version, marketplace, steps to reproduce, and expected versus actual behavior. Redact names, messages, and account details from screenshots. Never include cookies, tokens, or a browser-profile export. Marketplace layouts change; a useful reproduction helps more than a full page dump.
 
 Release preparation and manual checks are in [RELEASE.md](RELEASE.md).
 

@@ -38,8 +38,7 @@
     }
   },
   "icons": {
-    "32": "icon.svg",
-    "64": "icon.svg"
+    "1254": "icon.png"
   },
   "incognito": "not_allowed"
 }
