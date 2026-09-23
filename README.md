@@ -10,7 +10,7 @@ Hide matched listings from sellers you're tired of seeing, keep your mute list i
 
 ## Install
 
-[MarketMute on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/marketmute/) is submitted as **0.4.2** and awaiting Mozilla review. Permanent installation requires Mozilla's signed extension; the ZIP attached to the GitHub release is an unsigned upload package.
+[MarketMute on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/marketmute/) is submitted as **0.5.0** and awaiting Mozilla review. Permanent installation requires Mozilla's signed extension; the ZIP attached to the GitHub release is an unsigned upload package.
 
 Requires desktop Firefox 142+ or a compatible Zen release. Android and private windows are not supported.
 
