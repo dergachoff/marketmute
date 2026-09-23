@@ -45,21 +45,32 @@
       .filter((link) => heading.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING);
   }
 
+  function profileScroller(heading) {
+    for (let node = heading?.parentElement; node; node = node.parentElement) {
+      if (/auto|scroll/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight) return node;
+    }
+    return document.scrollingElement;
+  }
+
   async function getProfileItems() {
     await waitFor(() => {
       const heading = profileHeading();
       return heading && profileItemLinks(heading).length ? heading : null;
     });
 
-    let ids = new Set();
+    // Facebook virtualizes the profile grid, so IDs accumulate across passes.
+    const ids = new Set();
     let unchanged = 0;
-    for (let pass = 0; pass < 8 && ids.size < 200 && unchanged < 2; pass += 1) {
+    for (let pass = 0; pass < 25 && ids.size < 200 && unchanged < 2; pass += 1) {
       const heading = profileHeading();
-      const links = heading ? profileItemLinks(heading) : [];
-      const next = new Set(links.map((link) => MarketMute.listingIdFromUrl(link.href)).filter(Boolean));
-      unchanged = next.size === ids.size ? unchanged + 1 : 0;
-      ids = next;
-      links.at(-1)?.scrollIntoView({ block: "end" });
+      const size = ids.size;
+      for (const link of heading ? profileItemLinks(heading) : []) {
+        const id = MarketMute.listingIdFromUrl(link.href);
+        if (id) ids.add(id);
+      }
+      unchanged = ids.size === size ? unchanged + 1 : 0;
+      const scroller = profileScroller(heading);
+      scroller.scrollTop = scroller.scrollHeight;
       await sleep(700);
     }
 
@@ -97,10 +108,8 @@
       /^\/marketplace\/(?:item|profile)\//.test(location.pathname);
   }
 
-  if (IS_DUBIZZLE) {
-    document.documentElement.classList.add("marketmute-dubizzle");
-    document.addEventListener("marketmute:dubizzle-update", () => scan());
-  }
+  if (IS_DUBIZZLE) document.documentElement.classList.add("marketmute-dubizzle");
+  document.addEventListener("marketmute:page-update", () => scan());
 
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   document.addEventListener("pointermove", (event) => {
@@ -258,18 +267,21 @@
     if (response?.error) throw new Error(response.error);
   }
 
+  const sellerLabel = (link, sellerId) =>
+    link.dataset.marketmuteSellerName || `${IS_DUBIZZLE ? "Dubizzle seller" : "Seller"} ${sellerId}`;
+
   function decorate(link) {
     if (!IS_DUBIZZLE && (!link.closest('main, [role="main"]') ||
       link.closest('[role="dialog"], [role="complementary"]'))) return;
     const id = MarketMute.listingIdFromUrl(link.href);
     if (!id) return;
     const sellerId =
-      IS_DUBIZZLE && MarketMute.isId(link.dataset.marketmuteSellerId)
+      MarketMute.isId(link.dataset.marketmuteSellerId) && link.dataset.marketmuteListingId === id
         ? link.dataset.marketmuteSellerId
         : null;
     const card = MarketMute.findCard(link, ITEM_SELECTOR, IS_DUBIZZLE);
     let state = cards.get(card);
-    if (IS_DUBIZZLE && (!sellerId || link.dataset.marketmuteListingId !== id)) {
+    if (IS_DUBIZZLE && !sellerId) {
       if (state) {
         if (hoveredListingId === state.id) {
           hoveredListingId = null;
@@ -288,7 +300,7 @@
       state.link = link;
       state.fingerprint = MarketMute.fingerprint(link.textContent);
       state.sellerId = sellerId;
-      if (sellerId) state.sellerName = link.dataset.marketmuteSellerName || `Dubizzle seller ${sellerId}`;
+      if (sellerId) state.sellerName = sellerLabel(link, sellerId);
       syncLocalSeller(state);
       if (state.button.parentElement !== card) card.append(state.button);
       card.classList.toggle("marketmute-hidden", mutedItemIds.has(id) || Boolean(mutedSellers[sellerId]));
@@ -306,7 +318,7 @@
         link,
         id,
         sellerId,
-        sellerName: sellerId ? link.dataset.marketmuteSellerName || `Dubizzle seller ${sellerId}` : null,
+        sellerName: sellerId ? sellerLabel(link, sellerId) : null,
         fingerprint: MarketMute.fingerprint(link.textContent),
         button,
         promise: null,
@@ -326,7 +338,7 @@
         event.stopPropagation();
         const listingId = state.id;
         if (MarketMute.listingIdFromUrl(state.link.href) !== listingId ||
-          (IS_DUBIZZLE && state.link.dataset.marketmuteSellerId !== state.sellerId)) return;
+          (state.sellerId && state.link.dataset.marketmuteSellerId !== state.sellerId)) return;
         (resolvedItems.has(listingId) && !state.needsRetry ? mute(state) : resolveCard(state)).catch((error) => {
           if (state.id !== listingId) return;
           state.button.title = error.message;
@@ -342,7 +354,7 @@
       state.button.dataset.action = "match";
       state.button.setAttribute("aria-busy", "false");
       state.sellerId = sellerId;
-      state.sellerName = sellerId ? link.dataset.marketmuteSellerName || `Dubizzle seller ${sellerId}` : null;
+      state.sellerName = sellerId ? sellerLabel(link, sellerId) : null;
       state.fingerprint = MarketMute.fingerprint(link.textContent);
       state.button.title = "";
       state.button.textContent = "Match seller";

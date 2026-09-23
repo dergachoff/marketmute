@@ -6,10 +6,10 @@ Run `make package` to test the code, build the ZIP, and validate it with Mozilla
 
 ```sh
 make package
-unzip -l dist/marketmute-0.4.2.zip
+unzip -l dist/marketmute-0.5.0.zip
 ```
 
-The archive contains only the manifest, five JavaScript files, CSS, icon, and license. JavaScript is shipped directly: no transpilation, minification, or runtime dependencies.
+The archive contains only the manifest, six JavaScript files, CSS, icon, and license. JavaScript is shipped directly: no transpilation, minification, or runtime dependencies.
 
 Run the local UI fixture described in [README.md](README.md), including `test-ui.html?detail` for initial detail-page navigation. Local fixtures use mocked storage and provider results; they do not replace testing the installed extension on the real websites.
 
@@ -17,7 +17,8 @@ Run the local UI fixture described in [README.md](README.md), including `test-ui
 
 Use ordinary desktop Firefox or Zen, and record the browser version and extension commit tested.
 
-- Facebook: match a seller, mute while matching continues, reload, verify known listings stay hidden, then unmute. Hovering alone must not open tabs.
+- Facebook search: mute a seller directly, scroll for more results, reload, verify all of that seller's listings stay hidden, then unmute. Hovering and muting must not open tabs.
+- Facebook home feed: match a seller, mute while matching continues, reload, verify known listings stay hidden, then unmute. Hovering alone must not open tabs.
 - Facebook: open a listing and return, change search, and scroll more results. Controls must remain usable and Messenger chat must stay untouched.
 - Facebook: test lookup failure, double-click, and navigation away during matching. Retry must work and temporary tabs must close.
 - Dubizzle: check a business name and a private-seller fallback, mute, reload, search the saved title, then unmute. Matching must not open extra tabs.
@@ -30,7 +31,7 @@ Use ordinary desktop Firefox or Zen, and record the browser version and extensio
 2. Commit, push, and require the [CI checks](https://github.com/dergachoff/marketmute/actions) to pass for that commit.
 3. Capture real screenshots without personal account details. Show matching, muting, and search/unmute; check the upload form for current image limits.
 4. Submit the ZIP through the [Mozilla Developer Hub](https://addons.mozilla.org/developers/). Use the MIT license, [GitHub Issues](https://github.com/dergachoff/marketmute/issues) for support, and the current privacy policy.
-5. Explain the explicit Facebook lookup and the Dubizzle page-data adapter in reviewer notes. Supply any requested testing credentials only through Mozilla's private reviewer channel, never in git.
+5. Explain the Facebook and Dubizzle page-data adapters and the explicit Facebook lookup in reviewer notes. Supply any requested testing credentials only through Mozilla's private reviewer channel, never in git.
 6. Tag the tested commit and create its GitHub release. If Mozilla review is pending, say so in the README and release notes and label the ZIP as unsigned. After approval, update the installation status and use Mozilla's signed XPI for permanent installation.
 
 ## Recovery

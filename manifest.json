@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MarketMute",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Highlight and locally mute sellers on Facebook Marketplace and Dubizzle.",
   "permissions": ["storage"],
   "host_permissions": ["https://www.facebook.com/*", "https://*.dubizzle.com/*"],
@@ -13,6 +13,12 @@
       "matches": ["https://*.dubizzle.com/*"],
       "js": ["dubizzle-page.js"],
       "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.facebook.com/marketplace/*"],
+      "js": ["facebook-page.js"],
+      "run_at": "document_start",
       "world": "MAIN"
     },
     {

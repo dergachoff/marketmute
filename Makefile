@@ -1,5 +1,5 @@
 VERSION := $(shell node -p 'require("./manifest.json").version')
-FILES := manifest.json core.js resolver.js background.js content.js content.css dubizzle-page.js icon.png LICENSE
+FILES := manifest.json core.js resolver.js background.js content.js content.css dubizzle-page.js facebook-page.js icon.png LICENSE
 
 .PHONY: test package
 

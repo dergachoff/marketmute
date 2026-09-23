@@ -48,7 +48,8 @@ function fakeBrowser({ failProfile = false, failUpdate = false, loading = false 
 async function main() {
   for (const script of manifest.content_scripts) {
     if (script.matches.includes("https://www.facebook.com/marketplace/*")) {
-      assert.equal(script.run_at, "document_end");
+      assert.equal(script.run_at, script.world === "MAIN" ? "document_start" : "document_end",
+        "The Facebook page hook must run before the first GraphQL request");
     } else {
       assert.deepEqual(script.matches, ["https://*.dubizzle.com/*"], "Dubizzle scripts must cover search and category pages");
       assert.equal(script.run_at, "document_idle");
@@ -184,6 +185,39 @@ async function main() {
     type: "marketmute:get-seller", expectedPath: "/marketplace/item/10/",
   })).sellerName, "Example Seller");
 
+  let onProfileMessage;
+  const profilePages = [["1", "2"], ["2", "3"], ["3", "4"]];
+  let profilePage = 0;
+  const profileGrid = {
+    scrollHeight: 2000, clientHeight: 800, parentElement: null,
+    set scrollTop(_value) { profilePage = Math.min(profilePage + 1, profilePages.length - 1); },
+  };
+  const profileTitle = { textContent: "Example's listings", parentElement: { parentElement: profileGrid }, compareDocumentPosition: () => 4 };
+  vm.runInNewContext(fs.readFileSync(require.resolve("./content.js"), "utf8"), {
+    location: new URL(core.sellerUrl("42")),
+    MarketMute: core,
+    Node: { DOCUMENT_POSITION_FOLLOWING: 4 },
+    browser: {
+      runtime: { onMessage: { addListener: (listener) => { onProfileMessage = listener; } } },
+      storage: { local: { get: () => new Promise(() => {}) } },
+    },
+    matchMedia: () => ({ matches: false }),
+    getComputedStyle: (node) => ({ overflowY: node === profileGrid ? "auto" : "visible" }),
+    console,
+    setTimeout: (resolve) => setImmediate(resolve),
+    document: {
+      addEventListener() {},
+      scrollingElement: {},
+      querySelectorAll: (selector) => selector === "h1, h2, h3" ? [profileTitle]
+        : profilePages[profilePage].map((id) => ({ href: core.listingUrl(id) })),
+    },
+  });
+  assert.deepEqual(
+    [...(await onProfileMessage({ type: "marketmute:get-profile-items", expectedPath: "/marketplace/profile/42/" })).itemIds],
+    ["1", "2", "3", "4"],
+    "Profile scanning must scroll the listing container and keep IDs Facebook unmounts",
+  );
+
   const slowBrowser = fakeBrowser();
   const ordinarySend = slowBrowser.tabs.sendMessage;
   let finishProfile;
@@ -256,6 +290,45 @@ async function main() {
   pageStore.getState = () => { throw Error('Store unavailable'); };
   scanListings();
   assert.equal(pageElement.dataset.marketmuteDetail, '');
+
+  const fbLink = { href: core.listingUrl("201"), dataset: {} };
+  const inlineScript = { textContent: JSON.stringify({ data: { node: { id: "202", marketplace_listing_seller: { id: "61", name: "Inline Seller" } } } }) };
+  const fbPageEvents = [];
+  let fbScan;
+  let xhrLoad;
+  class FakeXhr {
+    open() {}
+    addEventListener(type, listener) { if (type === "load") xhrLoad = listener; }
+  }
+  vm.runInNewContext(fs.readFileSync(require.resolve("./facebook-page.js"), "utf8"), {
+    document: {
+      documentElement: {},
+      querySelectorAll: (selector) => selector.startsWith("script") ? [inlineScript] : [fbLink],
+      dispatchEvent: (event) => fbPageEvents.push(event),
+    },
+    XMLHttpRequest: FakeXhr,
+    MutationObserver: class { constructor(callback) { fbScan = callback; } observe() {} },
+    CustomEvent: class { constructor(type) { this.type = type; } },
+    queueMicrotask: (callback) => callback(),
+  });
+  assert.equal(fbLink.dataset.marketmuteSellerId, "", "Links without seller data stay unmarked");
+  const xhr = new FakeXhr();
+  xhr.open("POST", "/api/graphql/");
+  Object.assign(xhr, { responseType: "", responseText: [
+    JSON.stringify({ data: { viewer: { results: { edges: [{ node: { listing: {
+      id: "201", marketplace_listing_seller: { __typename: "User", id: "60", name: "Example Seller" },
+    } } }] } } } }),
+    "{\"label\":\"partial\"",
+  ].join("\n") });
+  xhrLoad();
+  assert.deepEqual({ ...fbLink.dataset }, { marketmuteListingId: "201", marketmuteSellerId: "60", marketmuteSellerName: "Example Seller" });
+  assert.equal(fbPageEvents.at(-1).type, "marketmute:page-update");
+  fbLink.href = core.listingUrl("202");
+  fbScan();
+  assert.equal(fbLink.dataset.marketmuteSellerId, "61", "Inline page data must also mark links");
+  fbLink.href = core.listingUrl("203");
+  fbScan();
+  assert.ok(Object.values(fbLink.dataset).every((value) => value === ""), "Reused links must drop the previous seller");
 
   let pointerMove;
   const motion = { matches: false };

@@ -27,7 +27,9 @@ Temporary add-ons must be loaded again after restarting the browser.
 
 **Dubizzle:** hover a listing to highlight loaded listings from the same seller, then click **Mute seller · N** to hide them. Matching reads data already loaded by Dubizzle; hovering and scrolling make no extra requests.
 
-**Facebook Marketplace:** click **Match seller**, then **Mute seller · N**. Matching takes a few seconds and briefly opens an inactive Facebook tab to identify the seller. You can mute as soon as the seller is identified; additional matches found during the scan are hidden too. Hovering alone can highlight identical listing text, but does not verify the seller or open tabs.
+**Facebook Marketplace:** on search results, click **Mute seller · N** to hide every listing from that seller, including ones posted later. The seller comes from data Facebook already loaded for the results; hovering and scrolling make no extra requests.
+
+Some Facebook feeds, such as the Marketplace home page, do not include the seller. There, click **Match seller**, then **Mute seller · N**. Matching takes a few seconds and briefly opens an inactive Facebook tab to read the seller and their profile listings. Hovering alone can highlight identical listing text, but does not verify the seller or open tabs.
 
 Open **MarketMute** in the bottom-left corner to search your muted sellers by name, seller ID, or saved listing title, and unmute them. Available seller names link to their profiles; Dubizzle entries can also include a **View listing** link. If a name is unavailable, the panel shows the seller ID. Opening a Dubizzle listing can fill in missing seller details.
 
@@ -37,12 +39,13 @@ Drag the MarketMute button to move it, or focus it and use the arrow keys. Its p
 
 Mutes stay in your browser's local storage. Muting changes what you see without reporting sellers, blocking accounts, or changing your marketplace account settings.
 
-There are no analytics or developer-operated servers. Facebook receives normal page requests when you explicitly match a seller or open a profile. See [Privacy](PRIVACY.md) for stored data, website access, and permissions.
+There are no analytics or developer-operated servers. Facebook receives normal page requests only when you explicitly match a seller or open a profile. See [Privacy](PRIVACY.md) for stored data, website access, and permissions.
 
 ## Limits
 
 - MarketMute does not detect counterfeit goods or identify every listing automatically.
-- Facebook matching reads up to 200 currently loaded listings from a seller profile.
+- On feeds without seller data, Facebook matching hides up to 200 listings found on the seller's profile at that time.
+- Sellers who use several accounts must be muted once per account.
 - Seller-profile detection currently expects Facebook's English `… listings` heading.
 - Changes to Facebook layouts or Dubizzle page data can break matching.
 
@@ -61,8 +64,8 @@ For the browser UI regression check, run `python3 -m http.server 8765 --bind 127
 
 - `core.js`: shared URL validation, card selection, and matching helpers.
 - `content.js` / `content.css`: listing controls and muted-seller panel.
-- `dubizzle-page.js`: reads listing data already held by the page and passes minimal metadata through DOM attributes.
-- `resolver.js`: explicit Facebook seller lookup and temporary-tab cleanup.
+- `dubizzle-page.js` / `facebook-page.js`: read listing data already held or loaded by the page and pass minimal seller metadata through DOM attributes.
+- `resolver.js`: explicit Facebook seller lookup for feeds without seller data, and temporary-tab cleanup.
 - `background.js`: serialized local storage writes and late match updates.
 
 ## Development principles

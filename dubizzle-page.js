@@ -87,7 +87,7 @@
         changed = true;
       }
     }
-    if (changed) document.dispatchEvent(new CustomEvent("marketmute:dubizzle-update"));
+    if (changed) document.dispatchEvent(new CustomEvent("marketmute:page-update"));
   }
 
   let queued = false;
